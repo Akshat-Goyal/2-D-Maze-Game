@@ -8,6 +8,13 @@ PlayerRenderer::PlayerRenderer(Shader &shader, float startX, float startY, float
     this->speed = speed;
     this->height = height;
     this->width = width;
+    this->img_no = 0;
+    this->img_gap = 5;
+    this->gap_cnt = this->img_gap;
+    this->left = false;
+    for(int i = 0; i < 5; i++){
+        this->images.push_back("amongUs_right" + to_string(i) + ".png");
+    }
     this->initRenderData();
 }
 
@@ -24,6 +31,18 @@ pair<float, float> PlayerRenderer::GetSize(){
     return {this->width, this->height};
 }
 
+int PlayerRenderer::ISize(){
+    return this->images.size();
+}
+
+string PlayerRenderer::GetImage(){
+    return this->images[this->img_no];
+}
+
+string PlayerRenderer::GetImage(int i){
+    return this->images[i];
+}
+
 void PlayerRenderer::MoveLeft(float dt, MazeRenderer *mazeRenderer){
     // float deltaX = - dt * this->speed;
     // if(!mazeRenderer->detect_collision({this->playerX + deltaX, this->playerY}, this->GetSize())){
@@ -31,6 +50,12 @@ void PlayerRenderer::MoveLeft(float dt, MazeRenderer *mazeRenderer){
     // }
     float dis = mazeRenderer->get_left_gate_x(this->GetPos(), this->GetSize());
     this->playerX = max(dis, this->playerX - dt * this->speed);
+    this->left = true;
+    this->gap_cnt--;
+    if(!this->gap_cnt){
+        this->img_no = (this->img_no - 1 + this->ISize()) % this->ISize();  
+        this->gap_cnt = this->img_gap;
+    }
 }
 
 void PlayerRenderer::MoveRight(float dt, MazeRenderer *mazeRenderer){
@@ -40,6 +65,12 @@ void PlayerRenderer::MoveRight(float dt, MazeRenderer *mazeRenderer){
     // }
     float dis = mazeRenderer->get_right_gate_x(this->GetPos(), this->GetSize());
     this->playerX = min(dis - this->width, this->playerX + dt * this->speed);
+    this->left = false;
+    this->gap_cnt--;
+    if(!this->gap_cnt){
+        this->img_no = (this->img_no + 1) % this->ISize();
+        this->gap_cnt = this->img_gap;
+    }
 }
 
 void PlayerRenderer::MoveUp(float dt, MazeRenderer *mazeRenderer){
@@ -49,6 +80,11 @@ void PlayerRenderer::MoveUp(float dt, MazeRenderer *mazeRenderer){
     // }
     float dis = mazeRenderer->get_up_gate_y(this->GetPos(), this->GetSize());
     this->playerY = max(dis, this->playerY - dt * this->speed);
+    this->gap_cnt--;
+    if(!this->gap_cnt){
+        this->img_no = (this->img_no - 1 + this->ISize()) % this->ISize();  
+        this->gap_cnt = this->img_gap;
+    }
 }
 
 void PlayerRenderer::MoveDown(float dt, MazeRenderer *mazeRenderer){
@@ -58,35 +94,41 @@ void PlayerRenderer::MoveDown(float dt, MazeRenderer *mazeRenderer){
     // }
     float dis = mazeRenderer->get_down_gate_y(this->GetPos(), this->GetSize());
     this->playerY = min(dis - this->height, this->playerY + dt * this->speed);
+    this->gap_cnt--;
+    if(!this->gap_cnt){
+        this->img_no = (this->img_no + 1) % this->ISize();
+        this->gap_cnt = this->img_gap;
+    }
 }
 
-void PlayerRenderer::DrawPlayer()
+void PlayerRenderer::DrawPlayer(Texture2D &texture)
 {
     // prepare transformations
     this->shader.Use();
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(this->playerX, this->playerY, 0.0f));
+    if(this->left){
+        model = glm::scale(glm::translate(model, glm::vec3(this->width, 0.0f, 0.0f)), glm::vec3(-1.0f, 1.0f, 1.0f));
+    }
     this->shader.SetMatrix4("model", model);
 
+    glActiveTexture(GL_TEXTURE0);
+    texture.Bind();
+
     glBindVertexArray(this->VAO);
-    glDrawArrays(GL_LINES, 0, this->nV);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, this->nV);
     glBindVertexArray(0);
 }
 
 float* PlayerRenderer::generatePlayer(){
-    this->nV = 8, this->mV = 2;
+    this->nV = 4, this->mV = 4;
     float *vertices = new float[this->nV * this->mV];
-    vertices[0] = 0, vertices[1] = 0;
-    vertices[2] = this->height, vertices[3] = 0;
 
-    vertices[4] = 0, vertices[5] = 0;
-    vertices[6] = 0, vertices[7] = this->width;
+    vertices[0] = 0, vertices[1] = 0, vertices[2] = 0, vertices[3] = 0;
+    vertices[4] = this->width, vertices[5] = 0, vertices[6] = 1, vertices[7] = 0;
+    vertices[8] = this->width, vertices[9] = this->height, vertices[10] = 1, vertices[11] = 1;
+    vertices[12] = 0, vertices[13] = this->height, vertices[14] = 0, vertices[15] = 1;
 
-    vertices[8] = 0, vertices[9] = this->width;
-    vertices[10] = this->height, vertices[11] = this->width;
-
-    vertices[12] = this->height, vertices[13] = 0;
-    vertices[14] = this->height, vertices[15] = this->width;    
     return vertices;
 }
 
@@ -94,7 +136,7 @@ void PlayerRenderer::initRenderData()
 {
     // configure VAO/VBO
     unsigned int VBO;
-    float *vertices = generatePlayer(); 
+    float *vertices = this->generatePlayer(); 
 
     glGenVertexArrays(1, &this->VAO);
     glGenBuffers(1, &VBO);
@@ -109,4 +151,22 @@ void PlayerRenderer::initRenderData()
     glBindVertexArray(0);
 
     delete [] vertices;
+}
+
+bool PlayerRenderer::overlapY(pair<float, float> point, pair<float, float> size){
+    if(this->playerY > point.second && this->playerY < point.second + size.second) return true;
+    if(this->playerY + this->height > point.second && this->playerY + this->height < point.second + size.second) return true;
+    if(this->playerY <= point.second && this->playerY + this->height >= point.second + size.second) return true;
+    return false;
+}
+
+bool PlayerRenderer::overlapX(pair<float, float> point, pair<float, float> size){
+    if(this->playerX > point.first && this->playerX < point.first + size.first) return true;
+    if(this->playerX + this->width > point.first && this->playerX + this->width < point.first + size.first) return true;
+    if(this->playerX <= point.first && this->playerX + this->width >= point.first + size.first) return true;
+    return false;
+}
+
+bool PlayerRenderer::DetectCollisionWithImposter(pair<float, float> point, pair<float, float> size){
+    return this->overlapX(point, size) & this->overlapY(point, size);
 }

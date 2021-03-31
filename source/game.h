@@ -5,17 +5,21 @@
 #include <GLFW/glfw3.h>
 
 #include "resource_manager.h"
+#include "text_renderer.h"
 #include "maze_renderer.h"
 #include "player_renderer.h"
 #include "imposter_renderer.h"
+#include <string>
 
 using namespace std;
 
 // Represents the current state of the game
 enum GameState {
+    GAME_PAUSE,
     GAME_ACTIVE,
-    GAME_MENU,
-    GAME_WIN
+    GAME_WIN,
+    GAME_LOST,
+    GAME_OVER
 };
 
 // Game holds all game-related state and functionality.
@@ -28,6 +32,11 @@ public:
     GameState               State;	
     bool                    Keys[1024];
     unsigned int            Width, Height;
+
+    int health, tasks, total_tasks, max_time, time_left;
+    time_t startTime;
+    string light;
+
     // constructor/destructor
     Game(unsigned int width, unsigned int height);
     ~Game();
@@ -37,6 +46,8 @@ public:
     void ProcessInput(float dt);
     void Update(float dt);
     void Render();
+    void Exit();
+    void UpdateTime();
 };
 
 #endif

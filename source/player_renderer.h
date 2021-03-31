@@ -6,7 +6,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "shader.h"
+#include "texture.h"
 #include "maze_renderer.h"
+#include <vector>
+#include <string>
+
+using namespace std;
 
 class PlayerRenderer
 {
@@ -16,7 +21,7 @@ public:
     // Destructor
     ~PlayerRenderer();
     // Renders
-    void DrawPlayer();
+    void DrawPlayer(Texture2D &texture);
     // Moves left
     void MoveLeft(float dt, MazeRenderer *mazeRenderer);
     // Moves right
@@ -29,18 +34,32 @@ public:
     pair<float, float> GetPos();
     // Player Size
     pair<float, float> GetSize();
+    // Detects collision with imposter
+    bool DetectCollisionWithImposter(pair<float, float> point, pair<float, float> size);
+    // Returns image loc
+    string GetImage();
+    // Returns image loc
+    string GetImage(int i);
+    // no. of images
+    int ISize();
 private:
     // Render state
     Shader       shader; 
     unsigned int VAO;
 
     float playerX, playerY, speed, height, width;
-    int nV, mV;
+    int nV, mV, img_no, img_gap, gap_cnt;
+    bool left;
+    vector<string> images;
 
     // Initializes and configures the buffer and vertex attributes
     void initRenderData();
     // Generates player
     float* generatePlayer();
+    // Returns true if overlap in x direction
+    bool overlapX(pair<float, float> point, pair<float, float> size);
+    // Returns true if overlap in y direction
+    bool overlapY(pair<float, float> point, pair<float, float> size);
 };
 
 #endif

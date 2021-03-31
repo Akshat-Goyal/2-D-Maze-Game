@@ -1,5 +1,5 @@
 #include "maze_renderer.h"
-#include <iostream>
+
 MazeRenderer::MazeRenderer(Shader &shader, float startX, float startY, float height, float width, int nX, int nY, pair<int, int> player, pair<int, int> imposter)
 {
     this->shader = shader;
@@ -268,6 +268,8 @@ float* MazeRenderer::generateMaze(pair<int, int> player, pair<int, int> imposter
     }
     
     this->openGates(player, true);
+    this->openGates(imposter, false);
+    this->openGates(imposter, false);
     this->openGates(imposter, false);
 
     this->distance_graph();

@@ -4,9 +4,10 @@
 MazeRenderer   *mazeRenderer;
 PlayerRenderer *playerRenderer;
 ImposterRenderer *imposterRenderer;
+TextRenderer *textRenderer;
 
 Game::Game(unsigned int width, unsigned int height) 
-    : State(GAME_ACTIVE), Keys(), Width(width), Height(height)
+    : State(GAME_PAUSE), Keys(), Width(width), Height(height)
 { 
 
 }
@@ -16,6 +17,7 @@ Game::~Game()
     delete mazeRenderer;
     delete playerRenderer;
     delete imposterRenderer;
+    delete textRenderer;
 }
 
 void Game::Init()
@@ -46,46 +48,130 @@ void Game::Init()
     // load shaders of player
     ResourceManager::LoadShader("../source/shaders/player.vs", "../source/shaders/player.fs", nullptr, "player");
     // configure shaders
-    ResourceManager::GetShader("player").Use().SetMatrix4("projection", projection);
+    ResourceManager::GetShader("player").Use().SetInteger("image", 0);
+    ResourceManager::GetShader("player").SetMatrix4("projection", projection);
     // set render-specific controls
-    playerRenderer = new PlayerRenderer(ResourceManager::GetShader("player"), playerX, playerY, 200, 20, 20);
+    playerRenderer = new PlayerRenderer(ResourceManager::GetShader("player"), playerX, playerY, 200, 40, 40);
+    // load textures
+    for(int i = 0; i < playerRenderer->ISize(); i++){
+        ResourceManager::LoadTexture(("../source/images/" + playerRenderer->GetImage(i)).c_str(), true, playerRenderer->GetImage(i));
+    }
 
     // load shaders of imposter
     ResourceManager::LoadShader("../source/shaders/imposter.vs", "../source/shaders/imposter.fs", nullptr, "imposter");
     // configure shaders
-    ResourceManager::GetShader("imposter").Use().SetMatrix4("projection", projection);
+    ResourceManager::GetShader("imposter").Use().SetInteger("image", 0);
+    ResourceManager::GetShader("imposter").SetMatrix4("projection", projection);
     // set render-specific controls
-    imposterRenderer = new ImposterRenderer(ResourceManager::GetShader("imposter"), imposterX, imposterY, 2, 20, 20);
+    imposterRenderer = new ImposterRenderer(ResourceManager::GetShader("imposter"), imposterX, imposterY, 2, 40, 40);
+    // load textures
+    for(int i = 0; i < imposterRenderer->ISize(); i++){
+        ResourceManager::LoadTexture(("../source/images/" + imposterRenderer->GetImage(i)).c_str(), true, imposterRenderer->GetImage(i));
+    }
+
+    textRenderer = new TextRenderer(this->Width, this->Height);
+    textRenderer->Load("../source/fonts/OCRAEXT.TTF", 24);
+
+    this->health = 100;
+    this->tasks = 0;
+    this->total_tasks = 2;
+    this->light = "On";
+    this->max_time = 100;
+    this->time_left = this->max_time;
+    time(&this->startTime);
+
+    this->State = GAME_ACTIVE;
 }
 
 void Game::Update(float dt)
 {
-    
+    this->UpdateTime();   
+}
+
+void Game::Exit(){
+    // exit(0);
 }
 
 void Game::ProcessInput(float dt)
 {
-    if(this->Keys[GLFW_KEY_W]){
+    if(this->State == GAME_ACTIVE && this->Keys[GLFW_KEY_W]){
         playerRenderer->MoveUp(dt, mazeRenderer);
+        bool status = playerRenderer->DetectCollisionWithImposter(imposterRenderer->GetPos(), imposterRenderer->GetSize());
+        // if(status){
+        //     this->State = GAME_LOST;
+        //     this->Exit(); return;
+        // }
         imposterRenderer->MoveImposter(dt, mazeRenderer, playerRenderer);
+        status = imposterRenderer->DetectCollisionWithPlayer(playerRenderer->GetPos(), playerRenderer->GetSize());
+        // if(status){
+        //     this->State = GAME_LOST;
+        //     this->Exit(); return;
+        // }
     }
-    if(this->Keys[GLFW_KEY_S]){
+    if(this->State == GAME_ACTIVE && this->Keys[GLFW_KEY_S]){
         playerRenderer->MoveDown(dt, mazeRenderer);
+        bool status = playerRenderer->DetectCollisionWithImposter(imposterRenderer->GetPos(), imposterRenderer->GetSize());
+        // if(status){
+        //     this->State = GAME_LOST;
+        //     this->Exit(); return;
+        // }
         imposterRenderer->MoveImposter(dt, mazeRenderer, playerRenderer);
+        status = imposterRenderer->DetectCollisionWithPlayer(playerRenderer->GetPos(), playerRenderer->GetSize());
+        // if(status){
+        //     this->State = GAME_LOST;
+        //     this->Exit(); return;
+        // }
     }
-    if(this->Keys[GLFW_KEY_A]){
+    if(this->State == GAME_ACTIVE && this->Keys[GLFW_KEY_A]){
         playerRenderer->MoveLeft(dt, mazeRenderer);
+        bool status = playerRenderer->DetectCollisionWithImposter(imposterRenderer->GetPos(), imposterRenderer->GetSize());
+        // if(status){
+        //     this->State = GAME_LOST;
+        //     this->Exit(); return;
+        // }
         imposterRenderer->MoveImposter(dt, mazeRenderer, playerRenderer);
+        status = imposterRenderer->DetectCollisionWithPlayer(playerRenderer->GetPos(), playerRenderer->GetSize());
+        // if(status){
+        //     this->State = GAME_LOST;
+        //     this->Exit(); return;
+        // }
     }
-    if(this->Keys[GLFW_KEY_D]){
+    if(this->State == GAME_ACTIVE && this->Keys[GLFW_KEY_D]){
         playerRenderer->MoveRight(dt, mazeRenderer);
+        bool status = playerRenderer->DetectCollisionWithImposter(imposterRenderer->GetPos(), imposterRenderer->GetSize());
+        // if(status){
+        //     this->State = GAME_LOST;
+        //     this->Exit(); return;
+        // }
         imposterRenderer->MoveImposter(dt, mazeRenderer, playerRenderer);
+        status = imposterRenderer->DetectCollisionWithPlayer(playerRenderer->GetPos(), playerRenderer->GetSize());
+        // if(status){
+        //     this->State = GAME_LOST;
+        //     this->Exit(); return;
+        // }
     }
 }
 
 void Game::Render()
 {
     mazeRenderer->DrawMaze();
-    playerRenderer->DrawPlayer();
-    imposterRenderer->DrawImposter();
+    playerRenderer->DrawPlayer(ResourceManager::GetTexture(playerRenderer->GetImage()));
+    imposterRenderer->DrawImposter(ResourceManager::GetTexture(imposterRenderer->GetImage()));
+    textRenderer->RenderText("Health: " + to_string(this->health), 50, 0, 1.0f);
+    textRenderer->RenderText("Tasks: " + to_string(this->tasks) + "/" + to_string(this->total_tasks), 50, 24, 1.0f);
+    textRenderer->RenderText("Light: " + this->light, 50 + this->Width / 2, 0, 1.0f);
+    textRenderer->RenderText("Time: " + to_string(this->time_left), 50 + this->Width / 2, 24, 1.0f);
+    if(this->State == GAME_OVER){
+        textRenderer->RenderText("Game Over", this->Width / 2 - 100, this->Height / 2, 2.0f);
+    }
+}
+
+void Game::UpdateTime(){
+    time_t current_time ;
+    time(&current_time);
+    int delta = int(current_time - this->startTime);
+    this->time_left = max(this->max_time - delta, 0);
+    if(this->time_left <= 0){
+        this->State = GAME_OVER;
+    }
 }
