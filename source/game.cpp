@@ -258,27 +258,27 @@ void Game::UpdateShader(){
     ResourceManager::GetShader("texture").Use().SetVector3f("lightPos", glm::vec3(playerRenderer->GetPos().first, playerRenderer->GetPos().second, 0.0f));
     ResourceManager::GetShader("textureM").Use().SetVector3f("lightPos", glm::vec3(playerRenderer->GetPos().first, playerRenderer->GetPos().second, 0.0f));
 
-    if(playerRenderer->getLight() == "OFF"){
-        ResourceManager::GetShader("maze").Use().SetInteger("light", 0);
-        ResourceManager::GetShader("texture").Use().SetInteger("light", 0);
-        ResourceManager::GetShader("textureM").Use().SetInteger("light", 0);
-    }
-    else{
-        ResourceManager::GetShader("maze").Use().SetInteger("light", 1);
-        ResourceManager::GetShader("texture").Use().SetInteger("light", 1);
-        ResourceManager::GetShader("textureM").Use().SetInteger("light", 1);
-    }
-
     // if(playerRenderer->getLight() == "OFF"){
-    //     ResourceManager::GetShader("maze").Use().SetFloat("lightCutOff", min(this->Height, this->Width) / 10);
-    //     ResourceManager::GetShader("texture").Use().SetFloat("lightCutOff", min(this->Height, this->Width) / 10);
-    //     ResourceManager::GetShader("textureM").Use().SetFloat("lightCutOff", min(this->Height, this->Width) / 10);
+    //     ResourceManager::GetShader("maze").Use().SetInteger("light", 0);
+    //     ResourceManager::GetShader("texture").Use().SetInteger("light", 0);
+    //     ResourceManager::GetShader("textureM").Use().SetInteger("light", 0);
     // }
     // else{
-    //     ResourceManager::GetShader("maze").Use().SetFloat("lightCutOff", max(this->Width, this->Height));
-    //     ResourceManager::GetShader("texture").Use().SetFloat("lightCutOff", max(this->Width, this->Height));
-    //     ResourceManager::GetShader("textureM").Use().SetFloat("lightCutOff", max(this->Width, this->Height));
+    //     ResourceManager::GetShader("maze").Use().SetInteger("light", 1);
+    //     ResourceManager::GetShader("texture").Use().SetInteger("light", 1);
+    //     ResourceManager::GetShader("textureM").Use().SetInteger("light", 1);
     // }
+
+    if(playerRenderer->getLight() == "OFF"){
+        ResourceManager::GetShader("maze").Use().SetFloat("lightCutOff", min(this->Height, this->Width) / 10);
+        ResourceManager::GetShader("texture").Use().SetFloat("lightCutOff", min(this->Height, this->Width) / 10);
+        ResourceManager::GetShader("textureM").Use().SetFloat("lightCutOff", min(this->Height, this->Width) / 10);
+    }
+    else{
+        ResourceManager::GetShader("maze").Use().SetFloat("lightCutOff", max(this->Width, this->Height));
+        ResourceManager::GetShader("texture").Use().SetFloat("lightCutOff", max(this->Width, this->Height));
+        ResourceManager::GetShader("textureM").Use().SetFloat("lightCutOff", max(this->Width, this->Height));
+    }
 }
 
 void Game::CheckCoins(){
