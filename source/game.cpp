@@ -55,12 +55,12 @@ void Game::Init()
     // set render-specific controls
     mazeRenderer = new MazeRenderer(ResourceManager::GetShader("maze"), startX, startY, mazeW, mazeH, nX, nY);
 
-    // load shaders of coin
-    ResourceManager::LoadShader("../source/shaders/coin.vs", "../source/shaders/coin.fs", nullptr, "coin");
+    // load shaders of texture
+    ResourceManager::LoadShader("../source/shaders/texture.vs", "../source/shaders/texture.fs", nullptr, "texture");
     // configure shaders
-    ResourceManager::GetShader("coin").Use().SetMatrix4("projection", projection);
+    ResourceManager::GetShader("texture").Use().SetMatrix4("projection", projection);
 
-    this->nCoins = rand() % 1 + 1;
+    this->nCoins = rand() % 8 + 1;
     this->coinsTaken = 0;
     pair<float, float> cSize = {min(20.0f, edgeX), min(20.0f, edgeY)};
     coinRenderers = new CoinRenderer* [this->nCoins];
@@ -68,15 +68,10 @@ void Game::Init()
         pair<int, int> p = {rand() % nX, rand() % nY};
         float posX = startX + p.first * edgeX + (deltaX == 0 ? 0 : (float)(rand() % deltaX));
         float posY = startY + p.second * edgeY + (deltaY == 0 ? 0 : (float)(rand() % deltaY));
-        coinRenderers[i] = new CoinRenderer(ResourceManager::GetShader("coin"), posX, posY, cSize.first, cSize.second);
+        coinRenderers[i] = new CoinRenderer(ResourceManager::GetShader("texture"), posX, posY, cSize.first, cSize.second);
     }
     // load textures
     ResourceManager::LoadTexture("../source/images/coin.png", true, "coin");
-
-    // load shaders of coin
-    ResourceManager::LoadShader("../source/shaders/bomb.vs", "../source/shaders/bomb.fs", nullptr, "bomb");
-    // configure shaders
-    ResourceManager::GetShader("bomb").Use().SetMatrix4("projection", projection);
 
     this->nBombs = rand() % 3 + 1;
     this->bombsTaken = 0;
@@ -86,15 +81,10 @@ void Game::Init()
         pair<int, int> p = {rand() % nX, rand() % nY};
         float posX = startX + p.first * edgeX + (deltaX == 0 ? 0 : (float)(rand() % deltaX));
         float posY = startY + p.second * edgeY + (deltaY == 0 ? 0 : (float)(rand() % deltaY));
-        bombRenderers[i] = new BombRenderer(ResourceManager::GetShader("bomb"), posX, posY, cSize.first, cSize.second);
+        bombRenderers[i] = new BombRenderer(ResourceManager::GetShader("texture"), posX, posY, cSize.first, cSize.second);
     }
     // load textures
     ResourceManager::LoadTexture("../source/images/bomb.png", true, "bomb");
-
-    // load shaders of button
-    ResourceManager::LoadShader("../source/shaders/button.vs", "../source/shaders/button.fs", nullptr, "button");
-    // configure shaders
-    ResourceManager::GetShader("button").Use().SetMatrix4("projection", projection);
 
     pair<float, float> btSize = {min(30.0f, edgeX), min(20.0f, edgeY)};
     {
@@ -102,15 +92,10 @@ void Game::Init()
         int deltaX = (int)(edgeX - btSize.first), deltaY = (int)(edgeY - btSize.second);
         float posX = startX + p.first * edgeX + (deltaX == 0 ? 0 : (float)(rand() % deltaX));
         float posY = startY + p.second * edgeY + (deltaY == 0 ? 0 : (float)(rand() % deltaY));
-        buttonRenderer = new ButtonRenderer(ResourceManager::GetShader("button"), posX, posY, btSize.first, btSize.second);
+        buttonRenderer = new ButtonRenderer(ResourceManager::GetShader("texture"), posX, posY, btSize.first, btSize.second);
     }
     // load textures
     ResourceManager::LoadTexture("../source/images/button.png", true, "button");
-
-    // load shaders of vaporise button
-    ResourceManager::LoadShader("../source/shaders/vaporiseButton.vs", "../source/shaders/vaporiseButton.fs", nullptr, "vaporiseButton");
-    // configure shaders
-    ResourceManager::GetShader("vaporiseButton").Use().SetMatrix4("projection", projection);
 
     pair<float, float> vbtSize = {min(30.0f, edgeX), min(20.0f, edgeY)};
     {
@@ -121,15 +106,10 @@ void Game::Init()
         int deltaX = (int)(edgeX - vbtSize.first), deltaY = (int)(edgeY - vbtSize.second);
         float posX = startX + p.first * edgeX + (deltaX == 0 ? 0 : (float)(rand() % deltaX));
         float posY = startY + p.second * edgeY + (deltaY == 0 ? 0 : (float)(rand() % deltaY));
-        vaporiseButtonRenderer = new VaporiseButtonRenderer(ResourceManager::GetShader("vaporiseButton"), posX, posY, vbtSize.first, vbtSize.second);
+        vaporiseButtonRenderer = new VaporiseButtonRenderer(ResourceManager::GetShader("texture"), posX, posY, vbtSize.first, vbtSize.second);
     }
     // load textures
     ResourceManager::LoadTexture("../source/images/vaporiseButton.png", true, "vaporiseButton");
-
-    // load shaders of vaporise button
-    ResourceManager::LoadShader("../source/shaders/exit.vs", "../source/shaders/exit.fs", nullptr, "exit");
-    // configure shaders
-    ResourceManager::GetShader("exit").Use().SetMatrix4("projection", projection);
 
     pair<float, float> eSize = {min(50.0f, edgeX), min(60.0f, edgeY)};
     {
@@ -137,10 +117,17 @@ void Game::Init()
         int deltaX = (int)(edgeX - eSize.first), deltaY = (int)(edgeY - eSize.second);
         float posX = startX + p.first * edgeX + (deltaX == 0 ? 0 : (float)(rand() % deltaX));
         float posY = startY + p.second * edgeY + (deltaY == 0 ? 0 : (float)(rand() % deltaY));
-        exitRenderer = new ExitRenderer(ResourceManager::GetShader("exit"), posX, posY, eSize.first, eSize.second);
+        exitRenderer = new ExitRenderer(ResourceManager::GetShader("texture"), posX, posY, eSize.first, eSize.second);
     }
     // load textures
     ResourceManager::LoadTexture("../source/images/exit.png", true, "exit");
+
+
+    // load shaders of textureM
+    ResourceManager::LoadShader("../source/shaders/textureM.vs", "../source/shaders/textureM.fs", nullptr, "textureM");
+    // configure shaders
+    ResourceManager::GetShader("textureM").Use().SetInteger("image", 0);
+    ResourceManager::GetShader("textureM").SetMatrix4("projection", projection);
 
     int pX = rand() % nX, pY = rand() % nY;
     int iX = rand() % nX, iY = rand() % nY;
@@ -152,25 +139,15 @@ void Game::Init()
     float imposterX = (mazeW / nX) * iX + startX;
     float imposterY = (mazeH / nY) * iY + startY;
 
-    // load shaders of player
-    ResourceManager::LoadShader("../source/shaders/player.vs", "../source/shaders/player.fs", nullptr, "player");
-    // configure shaders
-    ResourceManager::GetShader("player").Use().SetInteger("image", 0);
-    ResourceManager::GetShader("player").SetMatrix4("projection", projection);
     // set render-specific controls
-    playerRenderer = new PlayerRenderer(ResourceManager::GetShader("player"), playerX, playerY, 200, min(40.0f, edgeX), min(40.0f, edgeY));
+    playerRenderer = new PlayerRenderer(ResourceManager::GetShader("textureM"), playerX, playerY, 200, min(40.0f, edgeX), min(40.0f, edgeY));
     // load textures
     for(int i = 0; i < playerRenderer->ISize(); i++){
         ResourceManager::LoadTexture(("../source/images/" + playerRenderer->GetImage(i)).c_str(), true, playerRenderer->GetImage(i));
     }
 
-    // load shaders of imposter
-    ResourceManager::LoadShader("../source/shaders/imposter.vs", "../source/shaders/imposter.fs", nullptr, "imposter");
-    // configure shaders
-    ResourceManager::GetShader("imposter").Use().SetInteger("image", 0);
-    ResourceManager::GetShader("imposter").SetMatrix4("projection", projection);
     // set render-specific controls
-    imposterRenderer = new ImposterRenderer(ResourceManager::GetShader("imposter"), imposterX, imposterY, 60, min(40.0f, edgeX), min(40.0f, edgeY));
+    imposterRenderer = new ImposterRenderer(ResourceManager::GetShader("textureM"), imposterX, imposterY, 60, min(40.0f, edgeX), min(40.0f, edgeY));
     // load textures
     for(int i = 0; i < imposterRenderer->ISize(); i++){
         ResourceManager::LoadTexture(("../source/images/" + imposterRenderer->GetImage(i)).c_str(), true, imposterRenderer->GetImage(i));
