@@ -1,6 +1,6 @@
 #include "player_renderer.h"
 
-PlayerRenderer::PlayerRenderer(Shader &shader, float startX, float startY, float speed, float height, float width)
+PlayerRenderer::PlayerRenderer(Shader &shader, float startX, float startY, float speed, float width, float height)
 {
     this->shader = shader;
     this->playerX = startX;
@@ -172,6 +172,9 @@ void PlayerRenderer::initRenderData()
 }
 
 bool PlayerRenderer::overlapY(pair<float, float> point, pair<float, float> size){
+    // if(point.first + size.first > this->buttonX && point.first < this->buttonX + this->width) return true;
+    // return false;
+
     if(this->playerY > point.second && this->playerY < point.second + size.second) return true;
     if(this->playerY + this->height > point.second && this->playerY + this->height < point.second + size.second) return true;
     if(this->playerY <= point.second && this->playerY + this->height >= point.second + size.second) return true;
@@ -186,5 +189,9 @@ bool PlayerRenderer::overlapX(pair<float, float> point, pair<float, float> size)
 }
 
 bool PlayerRenderer::DetectCollisionWithImposter(pair<float, float> point, pair<float, float> size){
-    return this->overlapX(point, size) & this->overlapY(point, size);
+    bool col = this->overlapX(point, size) & this->overlapY(point, size);
+    if(col){
+        this->health = 0;
+    }
+    return col;
 }

@@ -1,6 +1,6 @@
 #include "maze_renderer.h"
 
-MazeRenderer::MazeRenderer(Shader &shader, float startX, float startY, float height, float width, int nX, int nY)
+MazeRenderer::MazeRenderer(Shader &shader, float startX, float startY, float width, float height, int nX, int nY)
 {
     this->shader = shader;
     this->startX = startX;
@@ -65,7 +65,7 @@ bool MazeRenderer::is_X_overlapping(pair<float, float> point, pair<float, float>
 }
 
 float MazeRenderer::get_left_gate_x(pair<float, float> point, pair<float, float> size){
-    float mx = this->startX - this->edgeX;
+    float mx = this->startX;
     for(int j = 0; j < this->nY; j++){
         for(int i = 0; i < this->nX; i++){
             for(int k = 0; k < 4; k++){
@@ -81,7 +81,7 @@ float MazeRenderer::get_left_gate_x(pair<float, float> point, pair<float, float>
 
 float MazeRenderer::get_right_gate_x(pair<float, float> point, pair<float, float> size){
     point = {point.first + size.first, point.second};
-    float mn = this->startX + this->width + this->edgeX;
+    float mn = this->startX + this->width;
     for(int j = 0; j < this->nY; j++){
         for(int i = 0; i < this->nX; i++){
             for(int k = 0; k < 4; k++){
@@ -96,7 +96,7 @@ float MazeRenderer::get_right_gate_x(pair<float, float> point, pair<float, float
 }
 
 float MazeRenderer::get_up_gate_y(pair<float, float> point, pair<float, float> size){
-    float mx = this->startY - this->edgeY;
+    float mx = this->startY;
     for(int j = 0; j < this->nY; j++){
         for(int i = 0; i < this->nX; i++){
             for(int k = 0; k < 4; k++){
@@ -112,7 +112,7 @@ float MazeRenderer::get_up_gate_y(pair<float, float> point, pair<float, float> s
 
 float MazeRenderer::get_down_gate_y(pair<float, float> point, pair<float, float> size){
     point = {point.first, point.second + size.second};
-    float mn = this->startY + this->height + this->edgeY;
+    float mn = this->startY + this->height;
     for(int j = 0; j < this->nY; j++){
         for(int i = 0; i < this->nX; i++){
             for(int k = 0; k < 4; k++){
@@ -294,7 +294,7 @@ float* MazeRenderer::generateMaze(){
 
     this->mazeGenerator({rand() % this->nX, rand() % this->nY});
 
-    this->createExit();
+    // this->createExit();
 
     this->distance_graph();
 
@@ -350,11 +350,11 @@ void MazeRenderer::distance_graph(){
             this->graph[idx({i, j})][idx({i, j})] = 0;
             for(int k = 0; k < 2; k++){
                 pair<int, int> nxt = this->move_to({i, j}, k);
-                if(this->is_valid(nxt) && this->get_room(i, j).gate(k) > 0) this->graph[idx({i, j})][idx(nxt)] = this->edgeX;
+                if(this->is_valid(nxt) && this->get_room(i, j).gate(k) > 0) this->graph[idx({i, j})][idx(nxt)] = 1;
             }
             for(int k = 2; k < 4; k++){
                 pair<int, int> nxt = this->move_to({i, j}, k);
-                if(this->is_valid(nxt) && this->get_room(i, j).gate(k) > 0) this->graph[idx({i, j})][idx(nxt)] = this->edgeY;
+                if(this->is_valid(nxt) && this->get_room(i, j).gate(k) > 0) this->graph[idx({i, j})][idx(nxt)] = 1;
             }
         }
     }
@@ -372,29 +372,28 @@ void MazeRenderer::distance_graph(){
 
 pair<float, float> MazeRenderer::find_path(pair<float, float> player, pair<float, float> imposter){
     auto idx = [&] (pair<int, int> loc) {return loc.second * this->nX + loc.first;};
-    auto equate = [] (float a, float b, float eps = 1e-4) {return fabs(a - b) <= eps ? true: false;};
 
     pair<int, int> pn = this->get_room_no(player);
     pair<int, int> in = this->get_room_no(imposter);
 
     if(pn == in) 
-        return {player.first - imposter.first, player.second - imposter.second};
+        return {(player.first - imposter.first) / this->edgeX, (player.second - imposter.second) / this->edgeY};
     else{
         pair<int, int> nxt = this->move_to(in, 0);
-        if(this->is_valid(nxt) && equate(this->graph[idx(in)][idx(nxt)] + this->graph[idx(nxt)][idx(pn)], this->graph[idx(in)][idx(pn)])){
-            return {-this->edgeX, 0};
+        if(this->is_valid(nxt) && this->get_room(in).gate(0) > 0 && this->graph[idx(in)][idx(nxt)] + this->graph[idx(nxt)][idx(pn)] == this->graph[idx(in)][idx(pn)]){
+            return {-1, 0};
         }
         nxt = this->move_to(in, 1);
-        if(this->is_valid(nxt) && equate(this->graph[idx(in)][idx(nxt)] + this->graph[idx(nxt)][idx(pn)], this->graph[idx(in)][idx(pn)])){
-            return {this->edgeX, 0};
+        if(this->is_valid(nxt) && this->get_room(in).gate(1) > 0 && this->graph[idx(in)][idx(nxt)] + this->graph[idx(nxt)][idx(pn)] == this->graph[idx(in)][idx(pn)]){
+            return {1, 0};
         }
         nxt = this->move_to(in, 2);
-        if(this->is_valid(nxt) && equate(this->graph[idx(in)][idx(nxt)] + this->graph[idx(nxt)][idx(pn)], this->graph[idx(in)][idx(pn)])){
-            return {0, -this->edgeY};
+        if(this->is_valid(nxt) && this->get_room(in).gate(2) > 0 && this->graph[idx(in)][idx(nxt)] + this->graph[idx(nxt)][idx(pn)] == this->graph[idx(in)][idx(pn)]){
+            return {0, -1};
         }
         nxt = this->move_to(in, 3);
-        if(this->is_valid(nxt) && equate(this->graph[idx(in)][idx(nxt)] + this->graph[idx(nxt)][idx(pn)], this->graph[idx(in)][idx(pn)])){
-            return {0, this->edgeY};
+        if(this->is_valid(nxt) && this->get_room(in).gate(3) > 0 && this->graph[idx(in)][idx(nxt)] + this->graph[idx(nxt)][idx(pn)] == this->graph[idx(in)][idx(pn)]){
+            return {0, 1};
         }
         return {0, 0};
     }

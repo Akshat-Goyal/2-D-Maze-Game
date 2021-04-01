@@ -1,5 +1,5 @@
-#ifndef BOMB_RENDERER_H
-#define BOMB_RENDERER_H
+#ifndef EXIT_RENDERER_H
+#define EXIT_RENDERER_H
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
@@ -11,15 +11,15 @@
 
 using namespace std;
 
-class BombRenderer
+class ExitRenderer
 {
 public:
     // Constructor (inits shaders/shapes)
-    BombRenderer(Shader &shader, float startX, float startY, float width, float height);
+    ExitRenderer(Shader &shader, float startX, float startY, float width, float height);
     // Destructor
-    ~BombRenderer();
+    ~ExitRenderer();
     // Renders
-    void DrawBomb(Texture2D &texture);
+    void DrawExit(Texture2D &texture);
     // Coin Pos
     pair<float, float> GetPos();
     // Coin Size
@@ -33,14 +33,14 @@ private:
     Shader       shader; 
     unsigned int VAO;
 
-    float bombX, bombY, height, width;
+    float exitX, exitY, height, width;
     int nV, mV;
     bool done;
 
     // Initializes and configures the buffer and vertex attributes
     void initRenderData();
-    // Generates coin
-    float* generateBomb();
+    // Generates button
+    float* generateExit();
     // checks x overlap
     bool xOverlap(pair<float, float> point, pair<float, float> size);
     // checks y overlap

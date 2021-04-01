@@ -1,13 +1,13 @@
 #include "bomb_renderer.h"
 
-BombRenderer::BombRenderer(Shader &shader, float startX, float startY, float height, float width)
+BombRenderer::BombRenderer(Shader &shader, float startX, float startY, float width, float height)
 {
     this->shader = shader;
     this->bombX = startX;
     this->bombY = startY;
     this->height = height;
     this->width = width;
-    this->done = false;
+    this->done = true;
     this->initRenderData();
 }
 
@@ -91,4 +91,8 @@ bool BombRenderer::DetectCollision(PlayerRenderer *playerRenderer){
         this->done = true;
     }
     return col;
+}
+
+void BombRenderer::setDone(bool val){
+    this->done = val;
 }

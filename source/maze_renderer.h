@@ -137,7 +137,7 @@ class MazeRenderer
 {
 public:
     // Constructor (inits shaders/shapes)
-    MazeRenderer(Shader &shader, float startX, float startY, float height, float width, int nX, int nY);
+    MazeRenderer(Shader &shader, float startX, float startY, float width, float height, int nX, int nY);
     // Destructor
     ~MazeRenderer();
     // Renders

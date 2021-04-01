@@ -11,15 +11,18 @@
 #include "imposter_renderer.h"
 #include "coin_renderer.h"
 #include "bomb_renderer.h"
+#include "button_renderer.h"
+#include "vaporiseButton_renderer.h"
+#include "exit_renderer.h"
 #include <string>
 
 using namespace std;
 
 // Represents the current state of the game
 enum GameState {
-    GAME_PAUSE,
+    GAME_STOP,
     GAME_ACTIVE,
-    GAME_WIN,
+    GAME_WON,
     GAME_LOST,
     GAME_OVER
 };
@@ -48,12 +51,17 @@ public:
     void ProcessInput(float dt);
     void Update(float dt);
     void Render();
-    void Exit();
     void UpdateTime();
     void UpdateTask();
     void CheckCoins();
     void CheckBombs();
+    void CheckButton();
+    void CheckVaporiseButton();
+    void CheckExit();
     void CheckPlayer();
+
+    int getNCoins();
+    int getNBombs();
 };
 
 #endif

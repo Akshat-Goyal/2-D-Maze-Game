@@ -1,13 +1,13 @@
 #include "coin_renderer.h"
 
-CoinRenderer::CoinRenderer(Shader &shader, float startX, float startY, float height, float width)
+CoinRenderer::CoinRenderer(Shader &shader, float startX, float startY, float width, float height)
 {
     this->shader = shader;
     this->coinX = startX;
     this->coinY = startY;
     this->height = height;
     this->width = width;
-    this->done = false;
+    this->done = true;
     this->initRenderData();
 }
 
@@ -90,4 +90,8 @@ bool CoinRenderer::DetectCollision(PlayerRenderer *playerRenderer){
         this->done = true;
     }
     return col;
+}
+
+void CoinRenderer::setDone(bool val){
+    this->done = val;
 }

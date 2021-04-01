@@ -1,6 +1,6 @@
 #include "imposter_renderer.h"
 
-ImposterRenderer::ImposterRenderer(Shader &shader, float startX, float startY, float speed, float height, float width)
+ImposterRenderer::ImposterRenderer(Shader &shader, float startX, float startY, float speed, float width, float height)
 {
     this->shader = shader;
     this->imposterX = startX;
@@ -8,8 +8,9 @@ ImposterRenderer::ImposterRenderer(Shader &shader, float startX, float startY, f
     this->speed = speed;
     this->height = height;
     this->width = width;
+    this->vaporised = false;
     this->img_no = 0;
-    this->img_gap = 5;
+    this->img_gap = 50;
     this->gap_cnt = this->img_gap;
     this->left = false;
     for(int i = 0; i < 5; i++){
@@ -43,14 +44,25 @@ string ImposterRenderer::GetImage(int i){
     return this->images[i];
 }
 
+void ImposterRenderer::setVaporised(bool val){
+    this->vaporised = val;
+}
+
+bool ImposterRenderer::isVaporised(){
+    return this->vaporised;
+}
+
 void ImposterRenderer::MoveLeft(float dt, MazeRenderer *mazeRenderer){
     // float deltaX = - dt * this->speed;
     // if(!mazeRenderer->detect_collision({this->imposterX + deltaX, this->imposterY}, this->GetSize())){
     //     this->imposterX += deltaX;
     // }
     float dis = mazeRenderer->get_left_gate_x(this->GetPos(), this->GetSize());
-    this->imposterX = max(dis, this->imposterX - dt * this->speed);
-    this->left = true;
+    float newX = max(dis, this->imposterX - dt * this->speed);
+    if(newX != this->imposterX){
+        this->imposterX = newX;
+        this->left = true;
+    }
     this->gap_cnt--;
     if(!this->gap_cnt){
         this->img_no = (this->img_no - 1 + this->ISize()) % this->ISize();  
@@ -64,8 +76,11 @@ void ImposterRenderer::MoveRight(float dt, MazeRenderer *mazeRenderer){
     //     this->imposterX += deltaX;
     // }
     float dis = mazeRenderer->get_right_gate_x(this->GetPos(), this->GetSize());
-    this->imposterX = min(dis - this->width, this->imposterX + dt * this->speed);
-    this->left = false;
+    float newX = min(dis - this->width, this->imposterX + dt * this->speed);
+    if(newX != this->imposterX){
+        this->imposterX = newX;
+        this->left = false;
+    }
     this->gap_cnt--;
     if(!this->gap_cnt){
         this->img_no = (this->img_no + 1) % this->ISize();
@@ -102,22 +117,30 @@ void ImposterRenderer::MoveDown(float dt, MazeRenderer *mazeRenderer){
 }
 
 void ImposterRenderer::MoveImposter(float dt, MazeRenderer *mazeRenderer, PlayerRenderer *playerRenderer){
-    pair<float, float> vec;
-    if(!mazeRenderer->is_in_room(this->GetPos(), this->GetSize())){
-        vec = this->prevMove;
-    }
-    else{
-        vec = mazeRenderer->find_path(playerRenderer->GetPos(), this->GetPos());
-        this->prevMove = vec;
-    }
+    if(this->vaporised) return;
+
+    pair<float, float> vec = mazeRenderer->find_path(playerRenderer->GetPos(), this->GetPos());
+    pair<float, float> old_point = {this->imposterX, this->imposterY};
+
     if(vec.first < 0) this->MoveLeft(-vec.first * dt, mazeRenderer);
     else this->MoveRight(vec.first * dt, mazeRenderer);
     if(vec.second < 0) this->MoveUp(-vec.second * dt, mazeRenderer);
     else this->MoveDown(vec.second * dt, mazeRenderer);
+
+    if(old_point.first == this->imposterX && old_point.second == this->imposterY){
+        if(vec.first == 0) vec.first = -1;
+        else if(vec.second == 0) vec.second = -1;
+        if(vec.first < 0) this->MoveLeft(-vec.first * dt, mazeRenderer);
+        else this->MoveRight(vec.first * dt, mazeRenderer);
+        if(vec.second < 0) this->MoveUp(-vec.second * dt, mazeRenderer);
+        else this->MoveDown(vec.second * dt, mazeRenderer);
+    }
 }
 
 void ImposterRenderer::DrawImposter(Texture2D &texture)
 {
+    if(this->vaporised) return;
+
     // prepare transformations
     this->shader.Use();
     glm::mat4 model = glm::mat4(1.0f);
@@ -183,5 +206,6 @@ bool ImposterRenderer::overlapX(pair<float, float> point, pair<float, float> siz
 }
 
 bool ImposterRenderer::DetectCollisionWithPlayer(pair<float, float> point, pair<float, float> size){
+    if(this->vaporised) return false;
     return this->overlapX(point, size) & this->overlapY(point, size);
 }

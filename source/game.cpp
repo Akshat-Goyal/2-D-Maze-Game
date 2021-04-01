@@ -7,9 +7,12 @@ ImposterRenderer *imposterRenderer;
 TextRenderer *textRenderer;
 CoinRenderer **coinRenderers;
 BombRenderer **bombRenderers;
+ButtonRenderer *buttonRenderer;
+VaporiseButtonRenderer *vaporiseButtonRenderer;
+ExitRenderer *exitRenderer;
 
 Game::Game(unsigned int width, unsigned int height) 
-    : State(GAME_PAUSE), Keys(), Width(width), Height(height)
+    : State(GAME_STOP), Keys(), Width(width), Height(height)
 { 
 
 }
@@ -28,6 +31,9 @@ Game::~Game()
         for(int i = 0; i < this->nBombs; i++) delete bombRenderers[i];
         delete[] bombRenderers;
     }
+    delete buttonRenderer;
+    delete vaporiseButtonRenderer;
+    delete exitRenderer;
 }
 
 void Game::Init()
@@ -37,9 +43,9 @@ void Game::Init()
     // normalization matrix
     glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(this->Width), static_cast<float>(this->Height), 0.0f, -1.0f, 1.0f);
 
-    int nX = 5, nY = 5;
+    int nX = 12, nY = 12;
     float startX = 100, startY = 100;
-    float mazeW = 400, mazeH = 400;
+    float mazeW = 1000, mazeH = 600;
     float edgeX = mazeW / nX, edgeY = mazeH / nY;
 
     // load shaders of maze
@@ -54,13 +60,14 @@ void Game::Init()
     // configure shaders
     ResourceManager::GetShader("coin").Use().SetMatrix4("projection", projection);
 
-    this->nCoins = rand() % 10 + 1;
+    this->nCoins = rand() % 1 + 1;
     this->coinsTaken = 0;
-    pair<float, float> cSize = {20, 20};
+    pair<float, float> cSize = {min(20.0f, edgeX), min(20.0f, edgeY)};
     coinRenderers = new CoinRenderer* [this->nCoins];
     for(int i = 0, deltaX = (int)(edgeX - cSize.first), deltaY = (int)(edgeY - cSize.second); i < this->nCoins; i++){
         pair<int, int> p = {rand() % nX, rand() % nY};
-        float posX = startX + p.first * edgeX + (float)(rand() % deltaX), posY = startY + p.second * edgeY + (float)(rand() % deltaY);
+        float posX = startX + p.first * edgeX + (deltaX == 0 ? 0 : (float)(rand() % deltaX));
+        float posY = startY + p.second * edgeY + (deltaY == 0 ? 0 : (float)(rand() % deltaY));
         coinRenderers[i] = new CoinRenderer(ResourceManager::GetShader("coin"), posX, posY, cSize.first, cSize.second);
     }
     // load textures
@@ -71,17 +78,69 @@ void Game::Init()
     // configure shaders
     ResourceManager::GetShader("bomb").Use().SetMatrix4("projection", projection);
 
-    this->nBombs = rand() % 10 + 1;
+    this->nBombs = rand() % 3 + 1;
     this->bombsTaken = 0;
-    pair<float, float> bSize = {20, 20};
+    pair<float, float> bSize = {min(20.0f, edgeY), min(20.0f, edgeY)};
     bombRenderers = new BombRenderer* [this->nBombs];
     for(int i = 0, deltaX = (int)(edgeX - bSize.first), deltaY = (int)(edgeY - bSize.second); i < this->nBombs; i++){
         pair<int, int> p = {rand() % nX, rand() % nY};
-        float posX = startX + p.first * edgeX + (float)(rand() % deltaX), posY = startY + p.second * edgeY + (float)(rand() % deltaY);
+        float posX = startX + p.first * edgeX + (deltaX == 0 ? 0 : (float)(rand() % deltaX));
+        float posY = startY + p.second * edgeY + (deltaY == 0 ? 0 : (float)(rand() % deltaY));
         bombRenderers[i] = new BombRenderer(ResourceManager::GetShader("bomb"), posX, posY, cSize.first, cSize.second);
     }
     // load textures
     ResourceManager::LoadTexture("../source/images/bomb.png", true, "bomb");
+
+    // load shaders of button
+    ResourceManager::LoadShader("../source/shaders/button.vs", "../source/shaders/button.fs", nullptr, "button");
+    // configure shaders
+    ResourceManager::GetShader("button").Use().SetMatrix4("projection", projection);
+
+    pair<float, float> btSize = {min(30.0f, edgeX), min(20.0f, edgeY)};
+    {
+        pair<int, int> p = {rand() % nX, rand() % nY};
+        int deltaX = (int)(edgeX - btSize.first), deltaY = (int)(edgeY - btSize.second);
+        float posX = startX + p.first * edgeX + (deltaX == 0 ? 0 : (float)(rand() % deltaX));
+        float posY = startY + p.second * edgeY + (deltaY == 0 ? 0 : (float)(rand() % deltaY));
+        buttonRenderer = new ButtonRenderer(ResourceManager::GetShader("button"), posX, posY, btSize.first, btSize.second);
+    }
+    // load textures
+    ResourceManager::LoadTexture("../source/images/button.png", true, "button");
+
+    // load shaders of vaporise button
+    ResourceManager::LoadShader("../source/shaders/vaporiseButton.vs", "../source/shaders/vaporiseButton.fs", nullptr, "vaporiseButton");
+    // configure shaders
+    ResourceManager::GetShader("vaporiseButton").Use().SetMatrix4("projection", projection);
+
+    pair<float, float> vbtSize = {min(30.0f, edgeX), min(20.0f, edgeY)};
+    {
+        pair<int, int> p = {rand() % nX, rand() % nY};
+        while(p.first == buttonRenderer->GetPos().first && p.second == buttonRenderer->GetPos().second){
+            p = {rand() % nX, rand() % nY};        
+        }
+        int deltaX = (int)(edgeX - vbtSize.first), deltaY = (int)(edgeY - vbtSize.second);
+        float posX = startX + p.first * edgeX + (deltaX == 0 ? 0 : (float)(rand() % deltaX));
+        float posY = startY + p.second * edgeY + (deltaY == 0 ? 0 : (float)(rand() % deltaY));
+        vaporiseButtonRenderer = new VaporiseButtonRenderer(ResourceManager::GetShader("vaporiseButton"), posX, posY, vbtSize.first, vbtSize.second);
+    }
+    // load textures
+    ResourceManager::LoadTexture("../source/images/vaporiseButton.png", true, "vaporiseButton");
+
+    // load shaders of vaporise button
+    ResourceManager::LoadShader("../source/shaders/exit.vs", "../source/shaders/exit.fs", nullptr, "exit");
+    // configure shaders
+    ResourceManager::GetShader("exit").Use().SetMatrix4("projection", projection);
+
+    pair<float, float> eSize = {min(50.0f, edgeX), min(60.0f, edgeY)};
+    {
+        pair<int, int> p = {rand() % nX, rand() % nY};
+        int deltaX = (int)(edgeX - eSize.first), deltaY = (int)(edgeY - eSize.second);
+        float posX = startX + p.first * edgeX + (deltaX == 0 ? 0 : (float)(rand() % deltaX));
+        float posY = startY + p.second * edgeY + (deltaY == 0 ? 0 : (float)(rand() % deltaY));
+        exitRenderer = new ExitRenderer(ResourceManager::GetShader("exit"), posX, posY, eSize.first, eSize.second);
+    }
+    // load textures
+    ResourceManager::LoadTexture("../source/images/exit.png", true, "exit");
 
     int pX = rand() % nX, pY = rand() % nY;
     int iX = rand() % nX, iY = rand() % nY;
@@ -99,7 +158,7 @@ void Game::Init()
     ResourceManager::GetShader("player").Use().SetInteger("image", 0);
     ResourceManager::GetShader("player").SetMatrix4("projection", projection);
     // set render-specific controls
-    playerRenderer = new PlayerRenderer(ResourceManager::GetShader("player"), playerX, playerY, 200, 40, 40);
+    playerRenderer = new PlayerRenderer(ResourceManager::GetShader("player"), playerX, playerY, 200, min(40.0f, edgeX), min(40.0f, edgeY));
     // load textures
     for(int i = 0; i < playerRenderer->ISize(); i++){
         ResourceManager::LoadTexture(("../source/images/" + playerRenderer->GetImage(i)).c_str(), true, playerRenderer->GetImage(i));
@@ -111,7 +170,7 @@ void Game::Init()
     ResourceManager::GetShader("imposter").Use().SetInteger("image", 0);
     ResourceManager::GetShader("imposter").SetMatrix4("projection", projection);
     // set render-specific controls
-    imposterRenderer = new ImposterRenderer(ResourceManager::GetShader("imposter"), imposterX, imposterY, 2, 40, 40);
+    imposterRenderer = new ImposterRenderer(ResourceManager::GetShader("imposter"), imposterX, imposterY, 60, min(40.0f, edgeX), min(40.0f, edgeY));
     // load textures
     for(int i = 0; i < imposterRenderer->ISize(); i++){
         ResourceManager::LoadTexture(("../source/images/" + imposterRenderer->GetImage(i)).c_str(), true, imposterRenderer->GetImage(i));
@@ -132,74 +191,29 @@ void Game::Init()
 
 void Game::Update(float dt)
 {
+    imposterRenderer->MoveImposter(dt, mazeRenderer, playerRenderer);
+    this->CheckButton();
+    this->CheckVaporiseButton();
     this->CheckCoins();
     this->CheckBombs();
+    this->CheckExit();
     this->CheckPlayer();
     this->UpdateTime();   
 }
-
-void Game::Exit(){
-    // exit(0);
-}
-
 
 void Game::ProcessInput(float dt)
 {
     if(this->State == GAME_ACTIVE && this->Keys[GLFW_KEY_W]){
         playerRenderer->MoveUp(dt, mazeRenderer);
-        bool status = playerRenderer->DetectCollisionWithImposter(imposterRenderer->GetPos(), imposterRenderer->GetSize());
-        // if(status){
-        //     this->State = GAME_LOST;
-        //     this->Exit(); return;
-        // }
-        imposterRenderer->MoveImposter(dt, mazeRenderer, playerRenderer);
-        status = imposterRenderer->DetectCollisionWithPlayer(playerRenderer->GetPos(), playerRenderer->GetSize());
-        // if(status){
-        //     this->State = GAME_LOST;
-        //     this->Exit(); return;
-        // }
     }
     if(this->State == GAME_ACTIVE && this->Keys[GLFW_KEY_S]){
         playerRenderer->MoveDown(dt, mazeRenderer);
-        bool status = playerRenderer->DetectCollisionWithImposter(imposterRenderer->GetPos(), imposterRenderer->GetSize());
-        // if(status){
-        //     this->State = GAME_LOST;
-        //     this->Exit(); return;
-        // }
-        imposterRenderer->MoveImposter(dt, mazeRenderer, playerRenderer);
-        status = imposterRenderer->DetectCollisionWithPlayer(playerRenderer->GetPos(), playerRenderer->GetSize());
-        // if(status){
-        //     this->State = GAME_LOST;
-        //     this->Exit(); return;
-        // }
     }
     if(this->State == GAME_ACTIVE && this->Keys[GLFW_KEY_A]){
         playerRenderer->MoveLeft(dt, mazeRenderer);
-        bool status = playerRenderer->DetectCollisionWithImposter(imposterRenderer->GetPos(), imposterRenderer->GetSize());
-        // if(status){
-        //     this->State = GAME_LOST;
-        //     this->Exit(); return;
-        // }
-        imposterRenderer->MoveImposter(dt, mazeRenderer, playerRenderer);
-        status = imposterRenderer->DetectCollisionWithPlayer(playerRenderer->GetPos(), playerRenderer->GetSize());
-        // if(status){
-        //     this->State = GAME_LOST;
-        //     this->Exit(); return;
-        // }
     }
     if(this->State == GAME_ACTIVE && this->Keys[GLFW_KEY_D]){
         playerRenderer->MoveRight(dt, mazeRenderer);
-        bool status = playerRenderer->DetectCollisionWithImposter(imposterRenderer->GetPos(), imposterRenderer->GetSize());
-        // if(status){
-        //     this->State = GAME_LOST;
-        //     this->Exit(); return;
-        // }
-        imposterRenderer->MoveImposter(dt, mazeRenderer, playerRenderer);
-        status = imposterRenderer->DetectCollisionWithPlayer(playerRenderer->GetPos(), playerRenderer->GetSize());
-        // if(status){
-        //     this->State = GAME_LOST;
-        //     this->Exit(); return;
-        // }
     }
 }
 
@@ -212,6 +226,9 @@ void Game::Render()
     for(int i = 0; i < this->nBombs; i++){
         bombRenderers[i]->DrawBomb(ResourceManager::GetTexture("bomb"));
     }
+    buttonRenderer->DrawButton(ResourceManager::GetTexture("button"));
+    vaporiseButtonRenderer->DrawVaporiseButton(ResourceManager::GetTexture("vaporiseButton"));
+    exitRenderer->DrawExit(ResourceManager::GetTexture("exit"));
     playerRenderer->DrawPlayer(ResourceManager::GetTexture(playerRenderer->GetImage()));
     imposterRenderer->DrawImposter(ResourceManager::GetTexture(imposterRenderer->GetImage()));
     textRenderer->RenderText("Health: " + to_string(playerRenderer->getHealth()), 50, 0, 1.0f);
@@ -223,7 +240,10 @@ void Game::Render()
         textRenderer->RenderText("Game Over", this->Width / 2 - 100, this->Height / 2, 2.0f);
     }
     if(this->State == GAME_LOST){
-        textRenderer->RenderText("Game Lost", this->Width / 2 - 100, this->Height / 2, 2.0f);
+        textRenderer->RenderText("You Lost", this->Width / 2 - 100, this->Height / 2, 2.0f);
+    }
+    if(this->State == GAME_WON){
+        textRenderer->RenderText("You Won", this->Width / 2 - 100, this->Height / 2, 2.0f);
     }
 }
 
@@ -239,6 +259,9 @@ void Game::UpdateTime(){
 
 void Game::UpdateTask(){
     this->tasks += 1;
+    if(this->tasks == this->total_tasks){
+        exitRenderer->setDone(false);
+    }
 }
 
 void Game::CheckCoins(){
@@ -258,8 +281,35 @@ void Game::CheckBombs(){
     }
 }
 
+void Game::CheckButton(){
+    buttonRenderer->DetectCollision(playerRenderer, coinRenderers, bombRenderers, this->getNCoins(), this->getNBombs());
+}
+
+void Game::CheckVaporiseButton(){
+    if(vaporiseButtonRenderer->DetectCollision(playerRenderer, imposterRenderer)){
+        this->UpdateTask();
+    }
+}
+
+void Game::CheckExit(){
+    if(exitRenderer->DetectCollision(playerRenderer)){
+        this->State = GAME_WON;
+    }
+}
+
 void Game::CheckPlayer(){
+    if(!imposterRenderer->isVaporised() && playerRenderer->DetectCollisionWithImposter(imposterRenderer->GetPos(), imposterRenderer->GetSize())){
+        this->State = GAME_LOST;
+    }
     if(playerRenderer->getHealth() <= 0){
         this->State = GAME_LOST;
     }
+}
+
+int Game::getNCoins(){
+    return this->nCoins;
+}
+
+int Game::getNBombs(){
+    return this->nBombs;
 }

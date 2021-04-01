@@ -18,7 +18,7 @@ class ImposterRenderer
 {
 public:
     // Constructor (inits shaders/shapes)
-    ImposterRenderer(Shader &shader, float startX, float startY, float speed, float height, float width);
+    ImposterRenderer(Shader &shader, float startX, float startY, float speed, float width, float height);
     // Destructor
     ~ImposterRenderer();
     // Renders
@@ -45,15 +45,18 @@ public:
     string GetImage(int i);
     // no. of images
     int ISize();
+    // sets vaporised
+    void setVaporised(bool val);
+    // returns true if done
+    bool isVaporised();
 private:
     // Render state
     Shader       shader; 
     unsigned int VAO;
 
     float imposterX, imposterY, speed, height, width;
-    pair<float, float> prevMove = {0, 0};
     int nV, mV, img_no, img_gap, gap_cnt;
-    bool left;
+    bool left, vaporised;
     vector<string> images;
 
     // Initializes and configures the buffer and vertex attributes

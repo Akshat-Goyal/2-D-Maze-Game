@@ -15,7 +15,7 @@ class CoinRenderer
 {
 public:
     // Constructor (inits shaders/shapes)
-    CoinRenderer(Shader &shader, float startX, float startY, float height, float width);
+    CoinRenderer(Shader &shader, float startX, float startY, float width, float height);
     // Destructor
     ~CoinRenderer();
     // Renders
@@ -26,6 +26,8 @@ public:
     pair<float, float> GetSize();
     // detect collision with player.
     bool DetectCollision(PlayerRenderer *playerRenderer);
+    // set done
+    void setDone(bool val);
 private:
     // Render state
     Shader       shader; 

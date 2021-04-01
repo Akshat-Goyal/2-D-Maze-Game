@@ -17,7 +17,7 @@ class PlayerRenderer
 {
 public:
     // Constructor (inits shaders/shapes)
-    PlayerRenderer(Shader &shader, float startX, float startY, float speed, float height, float width);
+    PlayerRenderer(Shader &shader, float startX, float startY, float speed, float width, float height);
     // Destructor
     ~PlayerRenderer();
     // Renders
