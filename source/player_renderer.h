@@ -50,6 +50,12 @@ public:
     void updateHealth(int val);
     // returns health
     int getHealth();
+    // set light
+    void setLight(string val);
+    // returns light
+    string getLight();
+    // toggles light
+    void toggleLight();
 private:
     // Render state
     Shader       shader; 
@@ -58,6 +64,7 @@ private:
     float playerX, playerY, speed, height, width;
     int nV, mV, img_no, img_gap, gap_cnt, score, health;
     bool left;
+    string light;
     vector<string> images;
 
     // Initializes and configures the buffer and vertex attributes

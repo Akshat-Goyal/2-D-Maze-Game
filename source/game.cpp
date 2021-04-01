@@ -12,7 +12,7 @@ VaporiseButtonRenderer *vaporiseButtonRenderer;
 ExitRenderer *exitRenderer;
 
 Game::Game(unsigned int width, unsigned int height) 
-    : State(GAME_STOP), Keys(), Width(width), Height(height)
+    : State(GAME_STOP), Keys(), KeysProcessed(), Width(width), Height(height)
 { 
 
 }
@@ -52,6 +52,7 @@ void Game::Init()
     ResourceManager::LoadShader("../source/shaders/maze.vs", "../source/shaders/maze.fs", nullptr, "maze");
     // configure shaders
     ResourceManager::GetShader("maze").Use().SetMatrix4("projection", projection);
+    ResourceManager::GetShader("maze").SetVector3f("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
     // set render-specific controls
     mazeRenderer = new MazeRenderer(ResourceManager::GetShader("maze"), startX, startY, mazeW, mazeH, nX, nY);
 
@@ -59,6 +60,7 @@ void Game::Init()
     ResourceManager::LoadShader("../source/shaders/texture.vs", "../source/shaders/texture.fs", nullptr, "texture");
     // configure shaders
     ResourceManager::GetShader("texture").Use().SetMatrix4("projection", projection);
+    ResourceManager::GetShader("texture").SetVector3f("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
 
     this->nCoins = rand() % 8 + 1;
     this->coinsTaken = 0;
@@ -128,6 +130,7 @@ void Game::Init()
     // configure shaders
     ResourceManager::GetShader("textureM").Use().SetInteger("image", 0);
     ResourceManager::GetShader("textureM").SetMatrix4("projection", projection);
+    ResourceManager::GetShader("textureM").SetVector3f("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
 
     int pX = rand() % nX, pY = rand() % nY;
     int iX = rand() % nX, iY = rand() % nY;
@@ -158,7 +161,6 @@ void Game::Init()
 
     this->tasks = 0;
     this->total_tasks = 2;
-    this->light = "On";
     this->max_time = 100;
     this->time_left = this->max_time;
     time(&this->startTime);
@@ -175,7 +177,8 @@ void Game::Update(float dt)
     this->CheckBombs();
     this->CheckExit();
     this->CheckPlayer();
-    this->UpdateTime();   
+    this->UpdateShader();
+    this->UpdateTime();  
 }
 
 void Game::ProcessInput(float dt)
@@ -191,6 +194,10 @@ void Game::ProcessInput(float dt)
     }
     if(this->State == GAME_ACTIVE && this->Keys[GLFW_KEY_D]){
         playerRenderer->MoveRight(dt, mazeRenderer);
+    }
+    if(this->State == GAME_ACTIVE && this->Keys[GLFW_KEY_L] && !this->KeysProcessed[GLFW_KEY_L]){
+        this->KeysProcessed[GLFW_KEY_L] = true;
+        playerRenderer->toggleLight();
     }
 }
 
@@ -211,7 +218,7 @@ void Game::Render()
     textRenderer->RenderText("Health: " + to_string(playerRenderer->getHealth()), 50, 0, 1.0f);
     textRenderer->RenderText("Tasks: " + to_string(this->tasks) + "/" + to_string(this->total_tasks), 50, 24, 1.0f);
     textRenderer->RenderText("Score: " + to_string(playerRenderer->getScore()), 50, 48, 1.0f);
-    textRenderer->RenderText("Light: " + this->light, 50 + this->Width / 2, 0, 1.0f);
+    textRenderer->RenderText("Light: " + playerRenderer->getLight(), 50 + this->Width / 2, 0, 1.0f);
     textRenderer->RenderText("Time: " + to_string(this->time_left), 50 + this->Width / 2, 24, 1.0f);
     if(this->State == GAME_OVER){
         textRenderer->RenderText("Game Over", this->Width / 2 - 100, this->Height / 2, 2.0f);
@@ -225,9 +232,14 @@ void Game::Render()
 }
 
 void Game::UpdateTime(){
+    if(this->State != GAME_ACTIVE) return;
+    
     time_t current_time ;
     time(&current_time);
     int delta = int(current_time - this->startTime);
+    if(playerRenderer->getLight() == "OFF"){
+        playerRenderer->updateScore(this->time_left - max(this->max_time - delta, 0));
+    }
     this->time_left = max(this->max_time - delta, 0);
     if(this->time_left <= 0){
         this->State = GAME_OVER;
@@ -239,6 +251,34 @@ void Game::UpdateTask(){
     if(this->tasks == this->total_tasks){
         exitRenderer->setDone(false);
     }
+}
+
+void Game::UpdateShader(){
+    ResourceManager::GetShader("maze").Use().SetVector3f("lightPos", glm::vec3(playerRenderer->GetPos().first, playerRenderer->GetPos().second, 0.0f));
+    ResourceManager::GetShader("texture").Use().SetVector3f("lightPos", glm::vec3(playerRenderer->GetPos().first, playerRenderer->GetPos().second, 0.0f));
+    ResourceManager::GetShader("textureM").Use().SetVector3f("lightPos", glm::vec3(playerRenderer->GetPos().first, playerRenderer->GetPos().second, 0.0f));
+
+    if(playerRenderer->getLight() == "OFF"){
+        ResourceManager::GetShader("maze").Use().SetInteger("light", 0);
+        ResourceManager::GetShader("texture").Use().SetInteger("light", 0);
+        ResourceManager::GetShader("textureM").Use().SetInteger("light", 0);
+    }
+    else{
+        ResourceManager::GetShader("maze").Use().SetInteger("light", 1);
+        ResourceManager::GetShader("texture").Use().SetInteger("light", 1);
+        ResourceManager::GetShader("textureM").Use().SetInteger("light", 1);
+    }
+
+    // if(playerRenderer->getLight() == "OFF"){
+    //     ResourceManager::GetShader("maze").Use().SetFloat("lightCutOff", min(this->Height, this->Width) / 10);
+    //     ResourceManager::GetShader("texture").Use().SetFloat("lightCutOff", min(this->Height, this->Width) / 10);
+    //     ResourceManager::GetShader("textureM").Use().SetFloat("lightCutOff", min(this->Height, this->Width) / 10);
+    // }
+    // else{
+    //     ResourceManager::GetShader("maze").Use().SetFloat("lightCutOff", max(this->Width, this->Height));
+    //     ResourceManager::GetShader("texture").Use().SetFloat("lightCutOff", max(this->Width, this->Height));
+    //     ResourceManager::GetShader("textureM").Use().SetFloat("lightCutOff", max(this->Width, this->Height));
+    // }
 }
 
 void Game::CheckCoins(){

@@ -36,11 +36,11 @@ public:
     // game state
     GameState               State;	
     bool                    Keys[1024];
+    bool                    KeysProcessed[1024];
     unsigned int            Width, Height;
 
     int tasks, total_tasks, max_time, time_left, nCoins, coinsTaken, nBombs, bombsTaken;
     time_t startTime;
-    string light;
 
     // constructor/destructor
     Game(unsigned int width, unsigned int height);
@@ -53,6 +53,7 @@ public:
     void Render();
     void UpdateTime();
     void UpdateTask();
+    void UpdateShader();
     void CheckCoins();
     void CheckBombs();
     void CheckButton();

@@ -9,6 +9,7 @@ PlayerRenderer::PlayerRenderer(Shader &shader, float startX, float startY, float
     this->height = height;
     this->width = width;
     this->score = 0;
+    this->light = "ON";
     this->health = 100;
     this->img_no = 0;
     this->img_gap = 5;
@@ -59,6 +60,19 @@ void PlayerRenderer::updateHealth(int val){
 
 int PlayerRenderer::getHealth(){
     return this->health;
+}
+
+void PlayerRenderer::setLight(string val){
+    this->light = val;
+}
+
+void PlayerRenderer::toggleLight(){
+    if(this->light == "ON") this->light = "OFF";
+    else this->light = "ON";
+}
+
+string PlayerRenderer::getLight(){
+    return this->light;
 }
 
 void PlayerRenderer::MoveLeft(float dt, MazeRenderer *mazeRenderer){
