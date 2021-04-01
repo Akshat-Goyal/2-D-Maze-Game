@@ -5,6 +5,8 @@ MazeRenderer   *mazeRenderer;
 PlayerRenderer *playerRenderer;
 ImposterRenderer *imposterRenderer;
 TextRenderer *textRenderer;
+CoinRenderer **coinRenderers;
+BombRenderer **bombRenderers;
 
 Game::Game(unsigned int width, unsigned int height) 
     : State(GAME_PAUSE), Keys(), Width(width), Height(height)
@@ -18,16 +20,69 @@ Game::~Game()
     delete playerRenderer;
     delete imposterRenderer;
     delete textRenderer;
+    {
+        for(int i = 0; i < this->nCoins; i++) delete coinRenderers[i];
+        delete[] coinRenderers;
+    }
+    {
+        for(int i = 0; i < this->nBombs; i++) delete bombRenderers[i];
+        delete[] bombRenderers;
+    }
 }
 
 void Game::Init()
 {
+    srand(time(NULL));
+
     // normalization matrix
     glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(this->Width), static_cast<float>(this->Height), 0.0f, -1.0f, 1.0f);
 
     int nX = 5, nY = 5;
     float startX = 100, startY = 100;
     float mazeW = 400, mazeH = 400;
+    float edgeX = mazeW / nX, edgeY = mazeH / nY;
+
+    // load shaders of maze
+    ResourceManager::LoadShader("../source/shaders/maze.vs", "../source/shaders/maze.fs", nullptr, "maze");
+    // configure shaders
+    ResourceManager::GetShader("maze").Use().SetMatrix4("projection", projection);
+    // set render-specific controls
+    mazeRenderer = new MazeRenderer(ResourceManager::GetShader("maze"), startX, startY, mazeW, mazeH, nX, nY);
+
+    // load shaders of coin
+    ResourceManager::LoadShader("../source/shaders/coin.vs", "../source/shaders/coin.fs", nullptr, "coin");
+    // configure shaders
+    ResourceManager::GetShader("coin").Use().SetMatrix4("projection", projection);
+
+    this->nCoins = rand() % 10 + 1;
+    this->coinsTaken = 0;
+    pair<float, float> cSize = {20, 20};
+    coinRenderers = new CoinRenderer* [this->nCoins];
+    for(int i = 0, deltaX = (int)(edgeX - cSize.first), deltaY = (int)(edgeY - cSize.second); i < this->nCoins; i++){
+        pair<int, int> p = {rand() % nX, rand() % nY};
+        float posX = startX + p.first * edgeX + (float)(rand() % deltaX), posY = startY + p.second * edgeY + (float)(rand() % deltaY);
+        coinRenderers[i] = new CoinRenderer(ResourceManager::GetShader("coin"), posX, posY, cSize.first, cSize.second);
+    }
+    // load textures
+    ResourceManager::LoadTexture("../source/images/coin.png", true, "coin");
+
+    // load shaders of coin
+    ResourceManager::LoadShader("../source/shaders/bomb.vs", "../source/shaders/bomb.fs", nullptr, "bomb");
+    // configure shaders
+    ResourceManager::GetShader("bomb").Use().SetMatrix4("projection", projection);
+
+    this->nBombs = rand() % 10 + 1;
+    this->bombsTaken = 0;
+    pair<float, float> bSize = {20, 20};
+    bombRenderers = new BombRenderer* [this->nBombs];
+    for(int i = 0, deltaX = (int)(edgeX - bSize.first), deltaY = (int)(edgeY - bSize.second); i < this->nBombs; i++){
+        pair<int, int> p = {rand() % nX, rand() % nY};
+        float posX = startX + p.first * edgeX + (float)(rand() % deltaX), posY = startY + p.second * edgeY + (float)(rand() % deltaY);
+        bombRenderers[i] = new BombRenderer(ResourceManager::GetShader("bomb"), posX, posY, cSize.first, cSize.second);
+    }
+    // load textures
+    ResourceManager::LoadTexture("../source/images/bomb.png", true, "bomb");
+
     int pX = rand() % nX, pY = rand() % nY;
     int iX = rand() % nX, iY = rand() % nY;
     while(pX == iX && pY == iY){
@@ -37,13 +92,6 @@ void Game::Init()
     float playerY = (mazeH / nY) * pY + startY;
     float imposterX = (mazeW / nX) * iX + startX;
     float imposterY = (mazeH / nY) * iY + startY;
-
-    // load shaders of maze
-    ResourceManager::LoadShader("../source/shaders/maze.vs", "../source/shaders/maze.fs", nullptr, "maze");
-    // configure shaders
-    ResourceManager::GetShader("maze").Use().SetMatrix4("projection", projection);
-    // set render-specific controls
-    mazeRenderer = new MazeRenderer(ResourceManager::GetShader("maze"), startX, startY, mazeW, mazeH, nX, nY, {pX, pY}, {iX, iY});
 
     // load shaders of player
     ResourceManager::LoadShader("../source/shaders/player.vs", "../source/shaders/player.fs", nullptr, "player");
@@ -72,7 +120,6 @@ void Game::Init()
     textRenderer = new TextRenderer(this->Width, this->Height);
     textRenderer->Load("../source/fonts/OCRAEXT.TTF", 24);
 
-    this->health = 100;
     this->tasks = 0;
     this->total_tasks = 2;
     this->light = "On";
@@ -85,12 +132,16 @@ void Game::Init()
 
 void Game::Update(float dt)
 {
+    this->CheckCoins();
+    this->CheckBombs();
+    this->CheckPlayer();
     this->UpdateTime();   
 }
 
 void Game::Exit(){
     // exit(0);
 }
+
 
 void Game::ProcessInput(float dt)
 {
@@ -155,14 +206,24 @@ void Game::ProcessInput(float dt)
 void Game::Render()
 {
     mazeRenderer->DrawMaze();
+    for(int i = 0; i < this->nCoins; i++){
+        coinRenderers[i]->DrawCoin(ResourceManager::GetTexture("coin"));
+    }
+    for(int i = 0; i < this->nBombs; i++){
+        bombRenderers[i]->DrawBomb(ResourceManager::GetTexture("bomb"));
+    }
     playerRenderer->DrawPlayer(ResourceManager::GetTexture(playerRenderer->GetImage()));
     imposterRenderer->DrawImposter(ResourceManager::GetTexture(imposterRenderer->GetImage()));
-    textRenderer->RenderText("Health: " + to_string(this->health), 50, 0, 1.0f);
+    textRenderer->RenderText("Health: " + to_string(playerRenderer->getHealth()), 50, 0, 1.0f);
     textRenderer->RenderText("Tasks: " + to_string(this->tasks) + "/" + to_string(this->total_tasks), 50, 24, 1.0f);
+    textRenderer->RenderText("Score: " + to_string(playerRenderer->getScore()), 50, 48, 1.0f);
     textRenderer->RenderText("Light: " + this->light, 50 + this->Width / 2, 0, 1.0f);
     textRenderer->RenderText("Time: " + to_string(this->time_left), 50 + this->Width / 2, 24, 1.0f);
     if(this->State == GAME_OVER){
         textRenderer->RenderText("Game Over", this->Width / 2 - 100, this->Height / 2, 2.0f);
+    }
+    if(this->State == GAME_LOST){
+        textRenderer->RenderText("Game Lost", this->Width / 2 - 100, this->Height / 2, 2.0f);
     }
 }
 
@@ -173,5 +234,32 @@ void Game::UpdateTime(){
     this->time_left = max(this->max_time - delta, 0);
     if(this->time_left <= 0){
         this->State = GAME_OVER;
+    }
+}
+
+void Game::UpdateTask(){
+    this->tasks += 1;
+}
+
+void Game::CheckCoins(){
+    if(this->coinsTaken == this->nCoins) return;
+    for(int i = 0; i < this->nCoins; i++){
+        this->coinsTaken += coinRenderers[i]->DetectCollision(playerRenderer);
+    }
+    if(this->coinsTaken == this->nCoins){
+        this->UpdateTask();
+    }
+}
+
+void Game::CheckBombs(){
+    if(this->bombsTaken == this->nBombs) return;
+    for(int i = 0; i < this->nBombs; i++){
+        this->bombsTaken += bombRenderers[i]->DetectCollision(playerRenderer);
+    }
+}
+
+void Game::CheckPlayer(){
+    if(playerRenderer->getHealth() <= 0){
+        this->State = GAME_LOST;
     }
 }

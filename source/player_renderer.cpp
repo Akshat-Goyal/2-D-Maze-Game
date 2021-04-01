@@ -8,6 +8,8 @@ PlayerRenderer::PlayerRenderer(Shader &shader, float startX, float startY, float
     this->speed = speed;
     this->height = height;
     this->width = width;
+    this->score = 0;
+    this->health = 100;
     this->img_no = 0;
     this->img_gap = 5;
     this->gap_cnt = this->img_gap;
@@ -41,6 +43,22 @@ string PlayerRenderer::GetImage(){
 
 string PlayerRenderer::GetImage(int i){
     return this->images[i];
+}
+
+void PlayerRenderer::updateScore(int val){
+    this->score += val;
+}
+
+int PlayerRenderer::getScore(){
+    return this->score;
+}
+
+void PlayerRenderer::updateHealth(int val){
+    this->health = max(0, this->health + val);
+}
+
+int PlayerRenderer::getHealth(){
+    return this->health;
 }
 
 void PlayerRenderer::MoveLeft(float dt, MazeRenderer *mazeRenderer){

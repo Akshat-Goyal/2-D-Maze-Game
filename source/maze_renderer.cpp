@@ -1,6 +1,6 @@
 #include "maze_renderer.h"
 
-MazeRenderer::MazeRenderer(Shader &shader, float startX, float startY, float height, float width, int nX, int nY, pair<int, int> player, pair<int, int> imposter)
+MazeRenderer::MazeRenderer(Shader &shader, float startX, float startY, float height, float width, int nX, int nY)
 {
     this->shader = shader;
     this->startX = startX;
@@ -11,7 +11,7 @@ MazeRenderer::MazeRenderer(Shader &shader, float startX, float startY, float hei
     this->nY = nY;
     this->edgeX = width / nX;
     this->edgeY = height / nY;
-    this->initRenderData(player, imposter);
+    this->initRenderData();
 }
 
 MazeRenderer::~MazeRenderer()
@@ -151,35 +151,29 @@ Room& MazeRenderer::get_room(int x, int y){
     return this->maze[y][x];
 }
 
-bool MazeRenderer::is_blocked(pair<int, int> p){
-    for(int i = 0; i < 4; i++){
-        if(this->get_room(p).gate(i) >= 0) return false;
-    }
+int MazeRenderer::side_rooms(pair<int, int> p){
+    int rooms = 0;
+    if(p.first == 0) rooms |= (1 << 0);
+    if(p.first == this->nX - 1) rooms |= (1 << 1);
+    if(p.second == 0) rooms |= (1 << 2);
+    if(p.second == this->nY - 1) rooms |= (1 << 3);
+    return rooms;
+}
+
+bool MazeRenderer::is_visited(pair<int, int> p, bool **visit){
+    if(p.first < 0 || p.first >= this->nX || p.second < 0 || p.second >= this->nY || visit[p.second][p.first] == false) return false;
     return true;
 }
 
 pair<int, int> MazeRenderer::move_to(pair<int, int> p, int gn){
-    pair<int, int> next;
+    pair<int, int> nxt;
     switch (gn){
-        case 0: next = {p.first - 1, p.second}; break;
-        case 1: next = {p.first + 1, p.second}; break;
-        case 2: next = {p.first, p.second - 1}; break;
-        case 3: next = {p.first, p.second + 1}; break;
+        case 0: nxt = {p.first - 1, p.second}; break;
+        case 1: nxt = {p.first + 1, p.second}; break;
+        case 2: nxt = {p.first, p.second - 1}; break;
+        case 3: nxt = {p.first, p.second + 1}; break;
     }
-    return next;
-}
-
-int MazeRenderer::blocked_gates(pair<int, int> p){
-    int gates = 0;
-    for(int i = 0; i < 4; i++){
-        if(this->get_room(p).gate(i) < 0) gates |= 1 << i;
-    }
-    return gates;
-}
-
-bool MazeRenderer::is_visited(pair<int, int> p, bool **visit){
-    if(p.first < 0 || p.first >= this->nX || p.second < 0 || p.second >= this->nY || visit[p.second][p.first] == 0) return false;
-    return true;
+    return nxt;
 }
 
 int MazeRenderer::visited_rooms(pair<int, int> p, bool **visit){
@@ -190,26 +184,48 @@ int MazeRenderer::visited_rooms(pair<int, int> p, bool **visit){
     return rooms;
 }
 
-int MazeRenderer::side_gates(pair<int, int> p){
-    int gates = 0;
-    if(p.first == 0) gates |= (1 << 0);
-    if(p.second == 0) gates |= (1 << 2);
-    if(p.first == this->nX - 1) gates |= (1 << 1);
-    if(p.second == this->nY - 1) gates |= (1 << 3);
-    return gates;
+int MazeRenderer::unvisited_rooms(pair<int, int> p, bool **visit){
+    return ((1 << 4) - 1) ^ (this->visited_rooms(p, visit) | this->side_rooms(p));
 }
 
-int MazeRenderer::random_gate(pair<int, int> p, bool **visit, bool exit){
-    int closed_gates = this->blocked_gates(p) | this->visited_rooms(p, visit);
-    if(!exit) closed_gates |= this->side_gates(p);
-    int gates = ((1 << 4) - 1) - closed_gates;
-    if(!gates) return -1;
-    int rg = rand() % __builtin_popcount(gates);
+bool MazeRenderer::has_unvisited_neigh(pair<int, int> p, bool **visit){
+    if(this->unvisited_rooms(p, visit)) return true;
+    return false;
+}
+
+pair<int, int> MazeRenderer::random_unvisited_neigh(pair<int, int> p, bool **visit){
+    int unvisited_neigh = this->unvisited_rooms(p, visit);
+    if(!unvisited_neigh) return {};
+    
+    int rr = rand() % __builtin_popcount(unvisited_neigh);   
     for(int i = 0; i < 4; i++){
-        if(rg == 0 && (gates & (1 << i)) != 0) return i;
-        if(gates & (1 << i)) rg--;
+        if(rr == 0 && (unvisited_neigh & (1 << i)) != 0) return this->move_to(p, i);
+        if(unvisited_neigh & (1 << i)) rr--;
     }
-    return -1;
+    return {};
+}
+
+void MazeRenderer::remove_wall_bw(pair<int, int> p, pair<int, int> neigh){
+    if(neigh.first == p.first - 1){
+        this->get_room(p).open(0);
+        this->get_room(neigh).open_opp(0);
+        return;
+    }
+    if(neigh.first == p.first + 1){
+        this->get_room(p).open(1);
+        this->get_room(neigh).open_opp(1);
+        return;
+    }
+    if(neigh.second == p.second - 1){
+        this->get_room(p).open(2);
+        this->get_room(neigh).open_opp(2);
+        return;
+    }
+    if(neigh.second == p.second + 1){
+        this->get_room(p).open(3);
+        this->get_room(neigh).open_opp(3);
+        return;
+    }
 }
 
 bool MazeRenderer::is_valid(pair<int, int> p){
@@ -217,33 +233,31 @@ bool MazeRenderer::is_valid(pair<int, int> p){
     return true;
 }
 
-void MazeRenderer::side_closed_room(pair<int, int> p, Room &room){
-    if(p.first == 0 && room.gate(0) == 0) room.set(0, -1);
-    if(p.second == 0 && room.gate(2) == 0) room.set(2, -1);
-    if(p.first == this->nX - 1 && room.gate(1) == 0) room.set(1, -1);
-    if(p.second == this->nY - 1 && room.gate(3) == 0) room.set(3, -1);
-}
+void MazeRenderer::mazeGenerator(pair<int, int> p){
+    if(!this->is_valid(p)) return;
 
-void MazeRenderer::openGates(pair<int, int> p, bool exit){
     bool **visit = new bool* [this->nY];
-    for(int j = 0; j < this->nY; j++) visit[j] = new bool[this->nX]();
-
-    this->side_closed_room(p, this->get_room(p));
-    visit[p.second][p.first] = true;
-
-    srand(time(NULL));
-    while(this->is_valid(p)){
-        int gn = this->random_gate(p, visit, exit);
-        if(gn == -1) break;
-        this->get_room(p).open(gn);
-        p = this->move_to(p, gn);
-        if(this->is_valid(p)){
-            this->get_room(p).open_opp(gn);
-            visit[p.second][p.first] = true;
-        }
+    for(int j = 0; j < this->nY; j++){
+        visit[j] = new bool[this->nX]();
     }
 
-    for(int j = 0; j < this->nY; j++) delete [] visit[j];
+    stack<pair<int, int>> st;
+    visit[p.second][p.first] = true;
+    st.push(p);
+
+    while(!st.empty()){
+        pair<int, int> cur = st.top(); st.pop();
+        if(!this->has_unvisited_neigh(cur, visit)) continue;
+        st.push(cur);
+        pair<int, int> neigh = this->random_unvisited_neigh(cur, visit);
+        this->remove_wall_bw(cur, neigh);
+        visit[neigh.second][neigh.first] = true;
+        st.push(neigh);
+    }
+
+    for(int j = 0; j < this->nY; j++){
+        delete[] visit[j];
+    }
     delete[] visit;
 }
 
@@ -260,17 +274,27 @@ void MazeRenderer::count_edges(){
     this->mV = 2;
 }
 
-float* MazeRenderer::generateMaze(pair<int, int> player, pair<int, int> imposter){
+void MazeRenderer::createExit(){
+    int gn = rand() % 4;
+    switch (gn){
+        case 0: this->get_room({0, rand() % this->nY}).open(0); break;
+        case 1: this->get_room({this->nX - 1, rand() % this->nY}).open(1); break;
+        case 2: this->get_room({rand() % this->nX, 0}).open(2); break;
+        case 3: this->get_room({rand() % this->nX, this->nY - 1}).open(3); break;
+    }
+}
+
+float* MazeRenderer::generateMaze(){
     this->maze = new Room* [this->nY];
     for(int j = 0; j < this->nY; j++){
         this->maze[j] = new Room[this->nX]();
-        for(int i = 0; i < this->nX; i++) this->get_room(i, j).set_gate_coords({i, j}, {this->startX, this->startY}, {this->edgeX, this->edgeY});
+        for(int i = 0; i < this->nX; i++) 
+            this->get_room(i, j).set_gate_coords({i, j}, {this->startX, this->startY}, {this->edgeX, this->edgeY});
     }
-    
-    this->openGates(player, true);
-    this->openGates(imposter, false);
-    this->openGates(imposter, false);
-    this->openGates(imposter, false);
+
+    this->mazeGenerator({rand() % this->nX, rand() % this->nY});
+
+    this->createExit();
 
     this->distance_graph();
 
@@ -290,11 +314,11 @@ float* MazeRenderer::generateMaze(pair<int, int> player, pair<int, int> imposter
     return vertices;
 }
 
-void MazeRenderer::initRenderData(pair<int, int> player, pair<int, int> imposter)
+void MazeRenderer::initRenderData()
 {
     // configure VAO/VBO
     unsigned int VBO;
-    float *vertices = generateMaze(player, imposter); 
+    float *vertices = generateMaze(); 
 
     glGenVertexArrays(1, &this->VAO);
     glGenBuffers(1, &VBO);

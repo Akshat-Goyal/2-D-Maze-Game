@@ -9,6 +9,8 @@
 #include "maze_renderer.h"
 #include "player_renderer.h"
 #include "imposter_renderer.h"
+#include "coin_renderer.h"
+#include "bomb_renderer.h"
 #include <string>
 
 using namespace std;
@@ -33,7 +35,7 @@ public:
     bool                    Keys[1024];
     unsigned int            Width, Height;
 
-    int health, tasks, total_tasks, max_time, time_left;
+    int tasks, total_tasks, max_time, time_left, nCoins, coinsTaken, nBombs, bombsTaken;
     time_t startTime;
     string light;
 
@@ -48,6 +50,10 @@ public:
     void Render();
     void Exit();
     void UpdateTime();
+    void UpdateTask();
+    void CheckCoins();
+    void CheckBombs();
+    void CheckPlayer();
 };
 
 #endif

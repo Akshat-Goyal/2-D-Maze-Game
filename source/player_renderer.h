@@ -42,13 +42,21 @@ public:
     string GetImage(int i);
     // no. of images
     int ISize();
+    // updates score
+    void updateScore(int val);
+    // returns score
+    int getScore();
+    // updates health
+    void updateHealth(int val);
+    // returns health
+    int getHealth();
 private:
     // Render state
     Shader       shader; 
     unsigned int VAO;
 
     float playerX, playerY, speed, height, width;
-    int nV, mV, img_no, img_gap, gap_cnt;
+    int nV, mV, img_no, img_gap, gap_cnt, score, health;
     bool left;
     vector<string> images;
 

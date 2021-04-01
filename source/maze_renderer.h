@@ -6,6 +6,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "shader.h"
+#include <stack>
 
 using namespace std;
 
@@ -136,18 +137,25 @@ class MazeRenderer
 {
 public:
     // Constructor (inits shaders/shapes)
-    MazeRenderer(Shader &shader, float startX, float startY, float height, float width, int nX, int nY, pair<int, int> player, pair<int, int> imposter);
+    MazeRenderer(Shader &shader, float startX, float startY, float height, float width, int nX, int nY);
     // Destructor
     ~MazeRenderer();
     // Renders
     void DrawMaze();
 
+    // returns distance from nearest left gate
     float get_left_gate_x(pair<float, float> point, pair<float, float> size);
+    // returns distance from nearest right gate
     float get_right_gate_x(pair<float, float> point, pair<float, float> size);
+    // returns distance from nearest top gate
     float get_up_gate_y(pair<float, float> point, pair<float, float> size);
+    // returns distance from nearest bottom gate
     float get_down_gate_y(pair<float, float> point, pair<float, float> size);
+    // detects collision of rectange with gates
     bool detect_collision(pair<float, float> point, pair<float, float> size);
+    // returns direction to which imposter moves to reach the player
     pair<float, float> find_path(pair<float, float> player, pair<float, float> imposter);
+    // returns true if rectangle is occupied in single room
     bool is_in_room(pair<float, float> point, pair<float, float> size);
 private:
     // Render state
@@ -160,42 +168,46 @@ private:
     int nX, nY, nV, mV;
 
     // Initializes and configures the buffer and vertex attributes
-    void initRenderData(pair<int, int> player, pair<int, int> imposter);
-    // Generates Maze
-    float* generateMaze(pair<int, int> player, pair<int, int> imposter);
+    void initRenderData();
+    // Generates Maze and its coordinates
+    float* generateMaze();
+    // Generates maze
+    void mazeGenerator(pair<int, int> p);
+    // create exit gate
+    void createExit();
     // Forms graph which contains shortest distance b/w ith and jth room of maze
     void distance_graph();
-    // Returns true if all the gates of p are blocked
-    bool is_blocked(pair<int, int> p);
     // Moves to next room to p through gate number: gn
     pair<int, int> move_to(pair<int, int> p, int gn);
-    // Returns bitmask of blocked gates of p
-    int blocked_gates(pair<int, int> p);
     // Returns true if p is visited
     bool is_visited(pair<int, int> p, bool **visit);
     // Returns bitmask of visited neighbouring rooms of p
     int visited_rooms(pair<int, int> p, bool **visit);
-    // Returns bitmask of boundary gates of p
-    int side_gates(pair<int, int> p);
-    // Returns random openable gate if available else returns -1
-    // Creates exit gate if exit = true
-    int random_gate(pair<int, int> p, bool **visit, bool exit);
     // Returns false is p is outside Maze
     bool is_valid(pair<int, int> p);
-    // Permanently closes the closed side gates of p
-    void side_closed_room(pair<int, int> p, Room &room);
-    // Counts closed gates of Maze
+    // Counts closed gates
     void count_edges();
-    // Opens random gates of Maze
-    void openGates(pair<int, int> p, bool exit);
     // Returns reference to room p of Maze
     Room &get_room(pair<int, int> p);
     // Returns reference to room {x, y} of Maze
     Room &get_room(int x, int y);
-
+    // Returns room no of point in maze
     pair<int, int> get_room_no(pair<float, float> point);
+    // Returns true if there are unvisited neighbours of p
+    bool has_unvisited_neigh(pair<int, int> p, bool **visit);
+    // Returns random unvisited neighbour of p
+    pair<int, int> random_unvisited_neigh(pair<int, int> p, bool **visit);
+    // Returns bitmask of unvisited rooms
+    int unvisited_rooms(pair<int, int> p, bool **visit);
+    // Returns bitmask of side (outside maze) rooms
+    int side_rooms(pair<int, int> p);
+    // Opens wall bw p and its neighbour
+    void remove_wall_bw(pair<int, int> p, pair<int, int> neigh);
+    // Checks y overlap
     bool is_Y_overlapping(pair<float, float> point, pair<float, float> size, pair<pair<float, float>, pair<float, float>> gate);
+    // Checks x overlap
     bool is_X_overlapping(pair<float, float> point, pair<float, float> size, pair<pair<float, float>, pair<float, float>> gate);
+    // Checks collision of point of size: size with gate
     bool check_collision(pair<float, float> point, pair<float, float> size, pair<pair<float, float>, pair<float, float>> gate);
 };
 
